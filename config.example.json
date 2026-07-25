@@ -1,0 +1,13 @@
+{
+  "bot_token": "123456:ABC-your-telegram-bot-token",
+  "group_chat_id": -1001234567890,
+  "admin_telegram_ids": [111111111, 222222222],
+  "timezone": "Asia/Bishkek",
+  "daily_poll_time": "21:00",
+  "reminder_before_deadline_minutes": 60,
+  "day_deadline_time": "23:59",
+  "weekly_report_day": "sunday",
+  "weekly_report_time": "23:00",
+  "db_path": "./data/bot.db",
+  "reports_dir": "./data/reports"
+}

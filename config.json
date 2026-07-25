@@ -1,0 +1,13 @@
+{
+  "bot_token": "8983873899:AAEqN23HqkQOt0SCLhMFGqqnfvOBzd7jya8",
+  "group_chat_id": -1001234567890,
+  "admin_telegram_ids": [],
+  "timezone": "Asia/Bishkek",
+  "daily_poll_time": "09:00",
+  "reminder_before_deadline_minutes": 60,
+  "day_deadline_time": "23:59",
+  "weekly_report_day": "thursday",
+  "weekly_report_time": "06:00",
+  "db_path": "./data/bot.db",
+  "reports_dir": "./data/reports"
+}

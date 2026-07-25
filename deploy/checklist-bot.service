@@ -1,0 +1,22 @@
+[Unit]
+Description=Telegram checklist/penalty bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/checklist-bot
+ExecStart=/home/pi/checklist-bot/checklist-bot -config /home/pi/checklist-bot/config.json -migrations /home/pi/checklist-bot/migrations
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Hardening: the service only needs its own working directory.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/pi/checklist-bot
+
+[Install]
+WantedBy=multi-user.target
