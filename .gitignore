@@ -1,0 +1,23 @@
+# Built binaries (see Makefile: build, build-arm64, build-arm)
+/checklist-bot
+/checklist-bot-arm64
+/checklist-bot-arm
+
+# Local config with real secrets — config.example.json stays tracked
+/config.json
+
+# Runtime data: SQLite db, generated PDF reports, backups
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+/deploy/backups/
+
+# OS/editor cruft
+.DS_Store
+*.swp
+
+# Go tooling
+*.test
+*.out
