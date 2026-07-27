@@ -17,16 +17,21 @@ func NewUserRepo(db *sqlx.DB) *UserRepo {
 	return &UserRepo{db: db}
 }
 
-// Upsert creates the user if telegram_id is new, or updates username/full_name
-// otherwise. It never touches is_admin/is_active — new rows get the schema
-// defaults (active, non-admin); use SetAdmin/SetActive to change those.
+// Upsert creates the user if telegram_id is new, or updates username/
+// full_name otherwise. It also reactivates the user (is_active = 1) on
+// conflict — since nothing ever deactivates a user except SetActive(false)
+// (e.g. an admin marking someone as having left the group), running /start
+// again is a legitimate "I'm back" signal and should undo that. It never
+// touches is_admin — new rows get the schema default (non-admin); use
+// SetAdmin to change that.
 func (r *UserRepo) Upsert(ctx context.Context, u *domain.User) error {
 	const q = `
 		INSERT INTO users (telegram_id, username, full_name)
 		VALUES (:telegram_id, :username, :full_name)
 		ON CONFLICT(telegram_id) DO UPDATE SET
 			username = excluded.username,
-			full_name = excluded.full_name
+			full_name = excluded.full_name,
+			is_active = 1
 	`
 	_, err := r.db.NamedExecContext(ctx, q, u)
 	if err != nil {

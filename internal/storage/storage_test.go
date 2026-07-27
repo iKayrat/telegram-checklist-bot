@@ -50,6 +50,43 @@ func TestUserRepoUpsertAndGet(t *testing.T) {
 	if got.FullName != "Neo Anderson" {
 		t.Fatalf("expected full name %q, got %q", "Neo Anderson", got.FullName)
 	}
+	if !got.IsActive {
+		t.Fatalf("expected new user to be active by default")
+	}
+}
+
+func TestUserRepoUpsertReactivates(t *testing.T) {
+	db := openTestDB(t)
+	repo := NewUserRepo(db)
+	ctx := context.Background()
+
+	if err := repo.Upsert(ctx, &domain.User{TelegramID: 99, Username: "morpheus", FullName: "Morpheus"}); err != nil {
+		t.Fatalf("initial upsert: %v", err)
+	}
+	if err := repo.SetActive(ctx, 99, false); err != nil {
+		t.Fatalf("deactivate: %v", err)
+	}
+
+	got, err := repo.GetByTelegramID(ctx, 99)
+	if err != nil {
+		t.Fatalf("get by telegram id: %v", err)
+	}
+	if got.IsActive {
+		t.Fatalf("expected user to be inactive after SetActive(false)")
+	}
+
+	// Re-running /start (Upsert) must reactivate the user.
+	if err := repo.Upsert(ctx, &domain.User{TelegramID: 99, Username: "morpheus", FullName: "Morpheus"}); err != nil {
+		t.Fatalf("second upsert: %v", err)
+	}
+
+	got, err = repo.GetByTelegramID(ctx, 99)
+	if err != nil {
+		t.Fatalf("get by telegram id: %v", err)
+	}
+	if !got.IsActive {
+		t.Fatalf("expected upsert to reactivate the user")
+	}
 }
 
 func TestUserRepoSetAdminAndGetByUsername(t *testing.T) {
