@@ -36,7 +36,7 @@ func (b *Bot) PostChecklist(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if len(tasks) == 0 {
-		return "Нет активных задач — сначала добавь их через /addtask.", nil
+		return "Нет активных задач — сначала добавь их через /add.", nil
 	}
 
 	statuses, err := b.svc.BuildStatuses(ctx, today)
