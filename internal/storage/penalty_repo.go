@@ -21,6 +21,10 @@ func NewWeekRepo(db *sqlx.DB) *WeekRepo {
 	return &WeekRepo{db: db}
 }
 
+// weekSelectColumns coalesces report_pdf_path to '' — it's NULL until a PDF
+// is generated, but domain.Week.ReportPDFPath is a plain (non-nullable) string.
+const weekSelectColumns = `id, start_date, end_date, penalty_amount, is_closed, COALESCE(report_pdf_path, '') AS report_pdf_path`
+
 func (r *WeekRepo) Create(ctx context.Context, start, end time.Time, penaltyAmount int64) (*domain.Week, error) {
 	res, err := r.db.ExecContext(ctx,
 		`INSERT INTO weeks (start_date, end_date, penalty_amount) VALUES (?, ?, ?)`,
@@ -37,7 +41,7 @@ func (r *WeekRepo) Create(ctx context.Context, start, end time.Time, penaltyAmou
 
 func (r *WeekRepo) GetByID(ctx context.Context, id int64) (*domain.Week, error) {
 	var w domain.Week
-	err := r.db.GetContext(ctx, &w, `SELECT * FROM weeks WHERE id = ?`, id)
+	err := r.db.GetContext(ctx, &w, `SELECT `+weekSelectColumns+` FROM weeks WHERE id = ?`, id)
 	if err != nil {
 		return nil, fmt.Errorf("get week by id: %w", err)
 	}
@@ -47,7 +51,7 @@ func (r *WeekRepo) GetByID(ctx context.Context, id int64) (*domain.Week, error) 
 // GetOpen returns the current not-yet-closed week, or nil, nil if none exists.
 func (r *WeekRepo) GetOpen(ctx context.Context) (*domain.Week, error) {
 	var w domain.Week
-	err := r.db.GetContext(ctx, &w, `SELECT * FROM weeks WHERE is_closed = 0 ORDER BY start_date DESC LIMIT 1`)
+	err := r.db.GetContext(ctx, &w, `SELECT `+weekSelectColumns+` FROM weeks WHERE is_closed = 0 ORDER BY start_date DESC LIMIT 1`)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -60,7 +64,7 @@ func (r *WeekRepo) GetOpen(ctx context.Context) (*domain.Week, error) {
 // GetLastClosed returns the most recently closed week, or nil if none exists.
 func (r *WeekRepo) GetLastClosed(ctx context.Context) (*domain.Week, error) {
 	var w domain.Week
-	err := r.db.GetContext(ctx, &w, `SELECT * FROM weeks WHERE is_closed = 1 ORDER BY end_date DESC LIMIT 1`)
+	err := r.db.GetContext(ctx, &w, `SELECT `+weekSelectColumns+` FROM weeks WHERE is_closed = 1 ORDER BY end_date DESC LIMIT 1`)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
