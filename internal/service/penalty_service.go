@@ -235,7 +235,10 @@ func (s *PenaltyService) Forgive(ctx context.Context, weekID, userID int64) (int
 
 // UserWeekStatus reports a single user's completion so far in the current
 // week (open week if one exists, otherwise the calendar week containing
-// now), for the /report command.
+// now), for the /report command. totalTasks/completed/missed only cover
+// days up to and including today — days later in the week haven't happened
+// yet and must not be counted as missed. start/end are still the full week
+// bounds, for display purposes.
 func (s *PenaltyService) UserWeekStatus(ctx context.Context, now time.Time, userID int64) (start, end time.Time, totalTasks, completed, missed int, err error) {
 	week, err := s.weeks.GetOpen(ctx)
 	if err != nil {
@@ -247,7 +250,13 @@ func (s *PenaltyService) UserWeekStatus(ctx context.Context, now time.Time, user
 		start, end = WeekRange(now, s.reportWeekday)
 	}
 
-	_, totalTasks, completedByUser, err := s.weekTaskStats(ctx, start, end)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	elapsedEnd := end
+	if today.Before(end) {
+		elapsedEnd = today
+	}
+
+	_, totalTasks, completedByUser, err := s.weekTaskStats(ctx, start, elapsedEnd)
 	if err != nil {
 		return time.Time{}, time.Time{}, 0, 0, 0, err
 	}

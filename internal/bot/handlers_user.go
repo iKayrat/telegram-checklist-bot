@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -73,7 +74,15 @@ func (b *Bot) handleCheckinToggle(c telebot.Context) error {
 	if err != nil {
 		return err
 	}
-	return c.Edit(BuildChecklistText(today, tasks, statuses), BuildChecklistKeyboard(tasks))
+
+	err = c.Edit(BuildChecklistText(today, tasks, statuses), BuildChecklistKeyboard(tasks))
+	if errors.Is(err, telebot.ErrSameMessageContent) {
+		// Two near-simultaneous presses can both compute the same final
+		// text (e.g. a quick double-tap) — the message already shows the
+		// right state, so this isn't a real failure.
+		return nil
+	}
+	return err
 }
 
 // handleReport replies (in DM) with the sender's own progress in the
@@ -93,7 +102,7 @@ func (b *Bot) handleReport(c telebot.Context) error {
 	}
 
 	return c.Reply(fmt.Sprintf(
-		"📊 Твоя статистика за неделю %s — %s:\nВыполнено: %d/%d\nПропущено: %d",
+		"📊 Твоя статистика за неделю %s — %s (на сегодня):\nВыполнено: %d/%d\nПропущено: %d",
 		start.Format("02.01.2006"), end.Format("02.01.2006"), completed, total, missed))
 }
 
