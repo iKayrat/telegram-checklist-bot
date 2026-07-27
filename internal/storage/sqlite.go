@@ -18,6 +18,25 @@ func Open(dbPath, migrationsDir string) (*sqlx.DB, error) {
 		return nil, fmt.Errorf("open sqlite db: %w", err)
 	}
 
+	// WAL + busy_timeout: the bot's own update loop is single-threaded, but
+	// the scheduler (internal/scheduler) runs cron jobs on separate
+	// goroutines that can occasionally hit the DB at the same moment as a
+	// live user interaction. Without these, a second concurrent writer gets
+	// an immediate SQLITE_BUSY instead of waiting briefly — worth having
+	// regardless, but the slower an SD card gets, the wider that window is.
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("set journal_mode: %w", err)
+	}
+	if _, err := db.Exec("PRAGMA busy_timeout=5000"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("set busy_timeout: %w", err)
+	}
+	if _, err := db.Exec("PRAGMA synchronous=NORMAL"); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("set synchronous: %w", err)
+	}
+
 	if err := runMigrations(db, migrationsDir); err != nil {
 		db.Close()
 		return nil, err
