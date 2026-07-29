@@ -42,15 +42,42 @@ func (b *Bot) handleStart(c telebot.Context) error {
 
 // handleCheckinToggle handles a press on any checklist task button. It
 // toggles the pressing user's completion state for that task on today's
-// date and re-renders the shared checklist message.
+// date and re-renders the shared checklist message. Presses on a stale
+// message (yesterday's or earlier, or today's after the day closed) are
+// rejected instead of silently recording against today and overwriting the
+// old message with today's content — see the poll-date payload added in
+// keyboard.go.
 func (b *Bot) handleCheckinToggle(c telebot.Context) error {
-	taskID, err := strconv.ParseInt(c.Data(), 10, 64)
+	args := c.Args()
+	if len(args) != 2 {
+		return c.Respond(&telebot.CallbackResponse{Text: "Некорректная задача"})
+	}
+	taskID, err := strconv.ParseInt(args[0], 10, 64)
 	if err != nil {
 		return c.Respond(&telebot.CallbackResponse{Text: "Некорректная задача"})
 	}
 
 	today := b.Now()
-	checked, err := b.svc.ToggleCheckin(context.Background(), c.Sender().ID, taskID, today)
+	if args[1] != today.Format("2006-01-02") {
+		return c.Respond(&telebot.CallbackResponse{
+			Text:      "Это старый чек-лист — отмечать можно только в сегодняшнем сообщении.",
+			ShowAlert: true,
+		})
+	}
+
+	ctx := context.Background()
+	poll, err := b.svc.GetPoll(ctx, today)
+	if err != nil {
+		return err
+	}
+	if poll == nil || poll.IsClosed {
+		return c.Respond(&telebot.CallbackResponse{
+			Text:      "День уже закрыт — отметки больше не принимаются.",
+			ShowAlert: true,
+		})
+	}
+
+	checked, err := b.svc.ToggleCheckin(ctx, c.Sender().ID, taskID, today)
 	if err != nil {
 		return c.Respond(&telebot.CallbackResponse{
 			Text:      "Сначала напиши мне /start в личных сообщениях",
@@ -66,16 +93,16 @@ func (b *Bot) handleCheckinToggle(c telebot.Context) error {
 		return err
 	}
 
-	tasks, err := b.svc.ActiveTasks(context.Background())
+	tasks, err := b.svc.ActiveTasks(ctx)
 	if err != nil {
 		return err
 	}
-	statuses, err := b.svc.BuildStatuses(context.Background(), today)
+	statuses, err := b.svc.BuildStatuses(ctx, today)
 	if err != nil {
 		return err
 	}
 
-	err = c.Edit(BuildChecklistText(today, tasks, statuses), BuildChecklistKeyboard(tasks))
+	err = c.Edit(BuildChecklistText(today, tasks, statuses), BuildChecklistKeyboard(tasks, today))
 	if errors.Is(err, telebot.ErrSameMessageContent) {
 		// Two near-simultaneous presses can both compute the same final
 		// text (e.g. a quick double-tap) — the message already shows the

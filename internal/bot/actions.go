@@ -45,7 +45,7 @@ func (b *Bot) PostChecklist(ctx context.Context) (string, error) {
 	}
 
 	msg, err := b.Send(telebot.ChatID(b.cfg.GroupChatID),
-		BuildChecklistText(today, tasks, statuses), BuildChecklistKeyboard(tasks))
+		BuildChecklistText(today, tasks, statuses), BuildChecklistKeyboard(tasks, today))
 	if err != nil {
 		return "", fmt.Errorf("send checklist to group: %w", err)
 	}
