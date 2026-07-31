@@ -1,5 +1,13 @@
 # Деплой на Raspberry Pi (без Docker)
 
+> ⚠️ **На Raspberry Pi OS Bookworm и новее пользователя `pi` по умолчанию
+> нет** — Raspberry Pi Imager с недавних пор просит задать своё имя
+> пользователя при прошивке SD-карты. Все команды и `checklist-bot.service`
+> ниже используют `pi`/`/home/pi/...` как пример — **сначала выполните
+> `whoami` на самом Pi** и замените везде на реальное имя. Если забудете —
+> сервис упадёт с `Failed to determine user credentials: No such process`
+> / `status=217/USER` в `journalctl`.
+
 ## 1. Сборка (кросс-компиляция с обычного компьютера)
 
 Определите архитектуру своего Pi:

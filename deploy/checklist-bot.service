@@ -3,6 +3,12 @@ Description=Telegram checklist/penalty bot
 After=network-online.target
 Wants=network-online.target
 
+# Placeholder user/paths below assume a "pi" user and /home/pi/checklist-bot.
+# Newer Raspberry Pi OS (Bookworm+) doesn't create a "pi" user by default —
+# run `whoami` on the Pi first and replace pi/checklist-bot below with your
+# actual username and install directory, or the service fails at startup
+# with "Failed to determine user credentials: No such process" (217/USER).
+
 [Service]
 Type=simple
 User=pi

@@ -46,6 +46,14 @@ func (b *Bot) Now() time.Time {
 	return time.Now().In(b.loc)
 }
 
+// groupSendOptions routes a group message to cfg.GroupTopicID when the
+// group has forum topics enabled and one is configured (0 = General/no
+// specific topic, telebot omits message_thread_id entirely in that case).
+// markup may be nil.
+func (b *Bot) groupSendOptions(markup *telebot.ReplyMarkup) *telebot.SendOptions {
+	return &telebot.SendOptions{ThreadID: b.cfg.GroupTopicID, ReplyMarkup: markup}
+}
+
 // adminOnly is a telebot middleware that rejects non-admin senders. A sender
 // counts as admin if they're listed in config.json (admin_telegram_ids —
 // the permanent, bootstrap admins) or were granted admin rights at runtime

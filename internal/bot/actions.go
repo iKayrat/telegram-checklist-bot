@@ -18,17 +18,17 @@ import (
 // drift apart. Each returns a human-readable outcome string suitable for
 // replying to an admin or logging from the scheduler.
 
-// PostChecklist sends today's checklist to the group, unless it was
-// already sent or there are no active tasks.
+// PostChecklist sends today's checklist to the group. Can be called any
+// number of times a day (e.g. for manual testing via /post_checklist) —
+// each call sends a fresh message; only the first one of the day creates
+// the daily_polls row (poll_date is unique), later ones just reuse it, so
+// checkins (keyed by date, not message) stay in sync across every copy.
 func (b *Bot) PostChecklist(ctx context.Context) (string, error) {
 	today := b.Now()
 
 	existing, err := b.svc.GetPoll(ctx, today)
 	if err != nil {
 		return "", err
-	}
-	if existing != nil {
-		return "Чек-лист на сегодня уже был отправлен в группу.", nil
 	}
 
 	tasks, err := b.svc.ActiveTasks(ctx)
@@ -45,13 +45,15 @@ func (b *Bot) PostChecklist(ctx context.Context) (string, error) {
 	}
 
 	msg, err := b.Send(telebot.ChatID(b.cfg.GroupChatID),
-		BuildChecklistText(today, tasks, statuses), BuildChecklistKeyboard(tasks, today))
+		BuildChecklistText(today, tasks, statuses), b.groupSendOptions(BuildChecklistKeyboard(tasks, today)))
 	if err != nil {
 		return "", fmt.Errorf("send checklist to group: %w", err)
 	}
 
-	if _, err := b.svc.CreatePoll(ctx, today, int64(msg.ID)); err != nil {
-		return "", err
+	if existing == nil {
+		if _, err := b.svc.CreatePoll(ctx, today, int64(msg.ID)); err != nil {
+			return "", err
+		}
 	}
 	return "📋 Чек-лист отправлен в группу.", nil
 }
@@ -173,7 +175,7 @@ func (b *Bot) publishWeeklyReport(ctx context.Context, week *domain.Week, result
 	genErr := pdf.GenerateWeeklyReport(week, results, weekFundTotal, grandTotal, pdfPath)
 	if genErr != nil {
 		text := buildWeeklyReportText(week, results, weekFundTotal, grandTotal)
-		if _, err := b.Send(telebot.ChatID(b.cfg.GroupChatID), text); err != nil {
+		if _, err := b.Send(telebot.ChatID(b.cfg.GroupChatID), text, b.groupSendOptions(nil)); err != nil {
 			return "", fmt.Errorf("post weekly report to group: %w", err)
 		}
 		for _, adminID := range b.cfg.AdminTelegramIDs {
@@ -191,7 +193,7 @@ func (b *Bot) publishWeeklyReport(ctx context.Context, week *domain.Week, result
 		FileName: filepath.Base(pdfPath),
 		Caption:  caption,
 	}
-	if _, err := b.Send(telebot.ChatID(b.cfg.GroupChatID), doc); err != nil {
+	if _, err := b.Send(telebot.ChatID(b.cfg.GroupChatID), doc, b.groupSendOptions(nil)); err != nil {
 		return "", fmt.Errorf("post weekly report pdf to group: %w", err)
 	}
 	for _, adminID := range b.cfg.AdminTelegramIDs {

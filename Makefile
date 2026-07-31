@@ -2,7 +2,12 @@ BINARY      := checklist-bot
 CONFIG      := config.json
 MIGRATIONS  := migrations
 
-.PHONY: run build build-arm64 build-arm test vet tidy clean
+PI_USER := raspberry
+PI_HOST := 192.168.0.10
+PI_DIR  := /home/raspberry/telegram-checklist-bot
+PI      := $(PI_USER)@$(PI_HOST)
+
+.PHONY: run build build-arm64 build-arm test vet tidy clean deploy
 
 ## Run the bot locally (uses ./config.json and ./migrations by default).
 run:
@@ -31,3 +36,16 @@ tidy:
 
 clean:
 	rm -f $(BINARY) $(BINARY)-arm64 $(BINARY)-arm
+
+## Full update: git pull, rebuild for Pi, ship binary+config+migrations,
+## restart systemd. Overwrites the Pi's config.json with the local one —
+## keep config.json edits on the Mac, not directly on the Pi.
+deploy:
+	git pull
+	$(MAKE) build-arm64
+	scp $(BINARY)-arm64 $(PI):$(PI_DIR)/$(BINARY)
+	scp $(CONFIG) $(PI):$(PI_DIR)/$(CONFIG)
+	ssh $(PI) 'chmod +x $(PI_DIR)/$(BINARY) && sudo systemctl restart checklist-bot && sudo systemctl status checklist-bot --no-pager'
+
+snapshot:
+	scp raspberry@192.168.0.10:/tmp/bot-snapshot.db ~/GolandProjects/tgbot/data/bot-snapshot.db

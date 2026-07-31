@@ -12,6 +12,7 @@ import (
 type Config struct {
 	BotToken                      string  `json:"bot_token"`
 	GroupChatID                   int64   `json:"group_chat_id"`
+	GroupTopicID                  int     `json:"group_topic_id"` // forum topic (message_thread_id) to post in; 0 = General/no topic
 	AdminTelegramIDs              []int64 `json:"admin_telegram_ids"`
 	Timezone                      string  `json:"timezone"`
 	DailyPollTime                 string  `json:"daily_poll_time"`
